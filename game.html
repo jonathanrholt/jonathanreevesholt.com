@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GYRE — a game by jonathan reeves holt</title>
+<style>
+  :root{
+    --bg:#0a0a14; --fg:#e8f0ff; --accent:#36e0c4; --hot:#ff3b6b; --gold:#ffd24a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--bg);overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--fg);}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{display:block;touch-action:none;}
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;pointer-events:none;transition:opacity .25s;}
+  .overlay.hidden{opacity:0;pointer-events:none;}
+  h1{font-size:clamp(40px,12vw,96px);font-weight:800;letter-spacing:.18em;margin-left:.18em;
+     background:linear-gradient(120deg,var(--accent),#7aa8ff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;
+     filter:drop-shadow(0 0 18px rgba(54,224,196,.35));}
+  .tag{margin-top:6px;font-size:14px;letter-spacing:.32em;text-transform:uppercase;opacity:.55;}
+  .hint{margin-top:0;font-size:clamp(15px,4vw,19px);opacity:.85;line-height:1.6;max-width:24em;}
+  #start .top,#start .bot{display:flex;flex-direction:column;align-items:center;}
+  #start .mid{height:clamp(150px,33vh,250px);flex:0 0 auto;}
+  #start .tag{margin-top:8px;}
+  .key{display:inline-block;padding:2px 10px;border:1px solid rgba(232,240,255,.35);border-radius:7px;font-size:.85em;margin:0 2px;}
+  .pulse{margin-top:30px;font-size:13px;letter-spacing:.3em;text-transform:uppercase;opacity:.8;animation:blink 1.4s ease-in-out infinite;}
+  @keyframes blink{0%,100%{opacity:.25}50%{opacity:.9}}
+  .big{font-size:clamp(64px,18vw,150px);font-weight:800;line-height:1;color:var(--gold);filter:drop-shadow(0 0 22px rgba(255,210,74,.4));}
+  .lbl{font-size:13px;letter-spacing:.34em;text-transform:uppercase;opacity:.55;margin-bottom:6px;}
+  .best{margin-top:18px;font-size:16px;opacity:.7;}
+  .world{margin-top:8px;font-size:13px;letter-spacing:.05em;opacity:.72;}
+  .worldstart{margin-top:22px;font-size:12px;letter-spacing:.22em;text-transform:uppercase;opacity:.6;}
+  .worldstart b{color:var(--gold);font-weight:700;}
+  #nameEntry.hidden, #againPulse.hidden{display:none;}
+  #nameEntry{pointer-events:auto;margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:11px;}
+  #nameEntry .rec{color:var(--gold);font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:13px;animation:blink 1s ease-in-out infinite;}
+  #nameInput{pointer-events:auto;background:rgba(232,240,255,.08);border:1px solid rgba(232,240,255,.35);border-radius:9px;color:var(--fg);
+             font-size:18px;font-weight:700;padding:9px 14px;text-align:center;text-transform:uppercase;letter-spacing:.18em;width:210px;max-width:70vw;outline:none;}
+  #nameInput:focus{border-color:var(--accent);}
+  .nameBtns{display:flex;gap:10px;}
+  #nameEntry button{pointer-events:auto;background:rgba(54,224,196,.16);border:1px solid rgba(54,224,196,.55);color:var(--fg);
+             border-radius:9px;padding:9px 20px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;}
+  #nameEntry #nameSkip{background:rgba(232,240,255,.05);border-color:rgba(232,240,255,.22);}
+  .credit{position:absolute;bottom:14px;width:100%;text-align:center;font-size:11px;letter-spacing:.28em;text-transform:uppercase;opacity:.3;}
+  .ver{position:absolute;bottom:14px;right:16px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;opacity:.28;}
+  #egg{position:absolute;left:14px;bottom:44px;width:clamp(84px,11vw,124px);border-radius:10px;opacity:0;transform:translateY(8px);
+       transition:opacity .3s ease, transform .3s ease;pointer-events:none;box-shadow:0 8px 26px rgba(0,0,0,.45);}
+  #egg.show{opacity:.96;transform:translateY(0);}
+  #plays{position:absolute;left:16px;bottom:16px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;opacity:.4;white-space:nowrap;}
+  #plays b{color:var(--accent);font-weight:700;opacity:.9;}
+  #mute{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(232,240,255,.18);
+        background:rgba(232,240,255,.05);color:var(--fg);font-size:17px;line-height:1;cursor:pointer;opacity:.55;
+        display:flex;align-items:center;justify-content:center;transition:opacity .2s, background .2s;z-index:5;}
+  #mute:hover{opacity:.95;background:rgba(232,240,255,.12);}
+  #mute.muted{opacity:.4;}
+  #mute.muted::after{content:"";position:absolute;left:50%;top:50%;width:24px;height:2px;border-radius:2px;
+        background:var(--hot);transform:translate(-50%,-50%) rotate(-45deg);}
+  .new{color:var(--gold);animation:blink .7s ease-in-out infinite;}
+  .tier{margin-top:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;line-height:1;min-height:1px;
+        background:linear-gradient(120deg,var(--accent),#7aa8ff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;
+        filter:drop-shadow(0 0 14px rgba(122,168,255,.45));}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+
+<div class="overlay" id="start">
+  <div class="top">
+    <h1>GYRE</h1>
+    <div class="tag">one tap · don't crash</div>
+  </div>
+  <div class="mid"></div>
+  <div class="bot">
+    <div class="hint">A core spins around the ring. <b>Tap, click, or press <span class="key">space</span></b> to flip direction.<br>Grab the <span style="color:var(--gold)">gold</span>. Dodge the <span style="color:var(--hot)">spikes</span>. Tag <span style="color:#4ad6ff">power-ups</span>.</div>
+    <div class="worldstart" id="worldStart"></div>
+    <div class="pulse">tap to start</div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="over">
+  <div class="lbl">score</div>
+  <div class="big" id="finalScore">0</div>
+  <div class="tier" id="tier"></div>
+  <div class="best" id="bestLine">best 0</div>
+  <div class="world" id="worldLine"></div>
+  <div id="nameEntry" class="hidden">
+    <div class="rec">★ new world record ★</div>
+    <input id="nameInput" maxlength="12" placeholder="YOUR NAME" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <div class="nameBtns"><button id="nameSubmit">SAVE</button><button id="nameSkip">SKIP</button></div>
+  </div>
+  <div class="pulse" id="againPulse">tap to play again</div>
+</div>
+
+<div class="credit">© jonathan reeves holt</div>
+<div class="ver">v2.2</div>
+<button id="mute" title="Music on/off" aria-label="Toggle music">♪</button>
+<div id="plays"></div>
+<video id="egg" src="egg.mp4" loop muted autoplay playsinline preload="auto"></video>
+
+<script>
+(function(){
+"use strict";
+const cv=document.getElementById("c"), ctx=cv.getContext("2d");
+const startEl=document.getElementById("start"), overEl=document.getElementById("over");
+const finalScoreEl=document.getElementById("finalScore"), bestLineEl=document.getElementById("bestLine");
+const tierEl=document.getElementById("tier");
+const eggEl=document.getElementById("egg");
+const muteEl=document.getElementById("mute");
+const worldStartEl=document.getElementById("worldStart");
+const worldLineEl=document.getElementById("worldLine");
+const nameEntryEl=document.getElementById("nameEntry");
+const nameInputEl=document.getElementById("nameInput");
+const nameSubmitEl=document.getElementById("nameSubmit");
+const nameSkipEl=document.getElementById("nameSkip");
+const againPulseEl=document.getElementById("againPulse");
+let globalBest={score:0,name:"—"}, awaitingName=false;
+function worldText(){
+  return globalBest.score>0
+    ? ("world best "+globalBest.score+(globalBest.name&&globalBest.name!=="—"?" · "+globalBest.name:""))
+    : "no world best yet — be the first";
+}
+function updateWorldUI(){
+  if(worldStartEl) worldStartEl.innerHTML = globalBest.score>0
+    ? ("world best <b>"+globalBest.score+"</b>"+(globalBest.name&&globalBest.name!=="—"?" · "+escapeHtml(globalBest.name):""))
+    : "be the first to set a world best";
+  if(worldLineEl && !awaitingName) worldLineEl.textContent = worldText();
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fetchGlobal(){
+  fetch("score.php",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+    if(d && typeof d.score==="number"){ globalBest={score:d.score, name:d.name||"—"}; updateWorldUI(); }
+  }).catch(()=>{});
+}
+updateWorldUI();   // show a default immediately, then refresh from the server
+fetchGlobal();
+
+// ---- global play counter ----
+const playsEl=document.getElementById("plays");
+let totalPlays=0;
+function updatePlaysUI(){ if(playsEl) playsEl.innerHTML="<b>"+totalPlays.toLocaleString()+"</b> "+(totalPlays===1?"play":"plays")+" worldwide"; }
+function fetchPlays(){
+  fetch("plays.php",{cache:"no-store"}).then(r=>r.json()).then(d=>{ if(d&&typeof d.plays==="number"){ totalPlays=d.plays; updatePlaysUI(); } }).catch(()=>{});
+}
+function bumpPlays(){
+  totalPlays++; updatePlaysUI();                       // optimistic
+  const body=new URLSearchParams(); body.set("bump","1");
+  fetch("plays.php",{method:"POST",body}).then(r=>r.json()).then(d=>{ if(d&&typeof d.plays==="number"){ totalPlays=d.plays; updatePlaysUI(); } }).catch(()=>{});
+}
+updatePlaysUI(); fetchPlays();
+function eggSpeed(){ if(eggEl){ try{ eggEl.playbackRate=Math.min(6, 1+score*0.05); }catch(e){} } }  // dances faster the higher you score
+
+let W=0,H=0,DPR=1,CX=0,CY=0,R=0;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=window.innerWidth; H=window.innerHeight;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  CX=W/2; CY=H/2;
+  R=Math.min(W,H)*0.30;
+}
+window.addEventListener("resize",resize); resize();
+
+// ---- sound (WebAudio, no assets) ----
+let AC=null;
+function actx(){ if(!AC){ try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return AC; }
+function beep(freq,dur,type,vol){
+  const a=actx(); if(!a) return;
+  const o=a.createOscillator(), g=a.createGain();
+  o.type=type||"sine"; o.frequency.value=freq;
+  g.gain.value=vol||0.08;
+  o.connect(g); g.connect(a.destination);
+  const t=a.currentTime;
+  g.gain.setValueAtTime(g.gain.value,t);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t); o.stop(t+dur);
+}
+function sPickup(c){ beep(440+Math.min(c,16)*40,0.12,"triangle",0.12); }
+function sFlip(){ beep(180,0.05,"square",0.02); }   // 60% quieter than before
+function sCrash(){ beep(120,0.5,"sawtooth",0.18); beep(70,0.6,"sine",0.14); }
+function sPower(){ beep(523,0.10,"triangle",0.10); setTimeout(()=>beep(784,0.14,"triangle",0.09),70); setTimeout(()=>beep(1046,0.16,"sine",0.06),150); }
+function sShieldBreak(){ beep(320,0.18,"sawtooth",0.10); beep(160,0.22,"sine",0.08); }
+function sLaunch(){
+  const a=actx(); if(!a) return;
+  const o=a.createOscillator(), g=a.createGain(); o.type="sine";
+  const t0=a.currentTime; o.frequency.setValueAtTime(300,t0); o.frequency.exponentialRampToValueAtTime(900,t0+0.5);
+  g.gain.setValueAtTime(0.04,t0); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.5);
+  o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0+0.5);
+}
+function sBoom(big){
+  beep(big?55:75,big?0.5:0.35,"sine",big?0.22:0.15);
+  // crackle
+  const n=big?5:3;
+  for(let i=0;i<n;i++) setTimeout(()=>beep(700+Math.random()*900,0.05,"square",0.025),60+i*45);
+}
+
+// ---- ambient cinematic music (Web Audio, no assets; atmosphere builds with score) ----
+// Signal chain: voices -> [dry + reverb send] -> master bus -> lowpass -> limiter -> out.
+// The limiter (DynamicsCompressor) + conservative gains prevent the clipping/"blown out" sound.
+let musicOn=(localStorage.getItem("orbit_music")!=="0");
+let musicBus=null, musicLP=null, musicComp=null, dryG=null, revSend=null, revG=null;
+let droneA=null, droneB=null, droneGain=null, musicTimer=null, nextBeat=0, beatN=0, noiseBuf=null;
+function mfreq(n){ return 440*Math.pow(2,(n-69)/12); }
+function makeIR(a,secs,decay){                       // synth reverb impulse (no asset)
+  const rate=a.sampleRate, len=Math.floor(rate*secs), buf=a.createBuffer(2,len,rate);
+  for(let ch=0;ch<2;ch++){ const d=buf.getChannelData(ch);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay); }
+  const c=a.createConvolver(); c.buffer=buf; return c;
+}
+function musicInit(){
+  const a=actx(); if(!a) return null;
+  if(!musicBus){
+    musicComp=a.createDynamicsCompressor();          // acts as a safety limiter
+    musicComp.threshold.value=-14; musicComp.knee.value=26; musicComp.ratio.value=6;
+    musicComp.attack.value=0.005; musicComp.release.value=0.3;
+    musicLP=a.createBiquadFilter(); musicLP.type="lowpass"; musicLP.frequency.value=1000; musicLP.Q.value=0.2;
+    musicBus=a.createGain(); musicBus.gain.value=0;
+    dryG=a.createGain(); dryG.gain.value=0.85;
+    revSend=a.createGain(); revSend.gain.value=0.5;
+    revG=a.createGain(); revG.gain.value=0.85;
+    const rev=makeIR(a,3.6,2.2);
+    dryG.connect(musicBus); revSend.connect(rev); rev.connect(revG); revG.connect(musicBus);
+    musicBus.connect(musicLP); musicLP.connect(musicComp); musicComp.connect(a.destination);
+    const nl=Math.floor(a.sampleRate*0.4); noiseBuf=a.createBuffer(1,nl,a.sampleRate);
+    const nd=noiseBuf.getChannelData(0); for(let i=0;i<nl;i++) nd[i]=Math.random()*2-1;   // for drums
+  }
+  return a;
+}
+function voice(time,freq,dur,type,vol,attack,detune){
+  const a=AC, o=a.createOscillator(), g=a.createGain();
+  o.type=type; o.frequency.value=freq; if(detune) o.detune.value=detune;
+  g.gain.setValueAtTime(0.0001,time);
+  g.gain.exponentialRampToValueAtTime(vol, time+attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, time+attack+dur);
+  o.connect(g); g.connect(dryG); g.connect(revSend);
+  o.start(time); o.stop(time+attack+dur+0.05);
+}
+// moody minor progression: i – VI – iv – V  (Am – F – Dm – E), midi triads
+const PROG=[[57,60,64],[53,57,60],[50,53,57],[52,56,59]];
+const SCALE=[0,2,3,5,7,8,10];                        // A natural minor
+function padChord(time,notes,dur){
+  for(const n of notes){
+    voice(time, mfreq(n),   dur, "sine",     0.040, 1.3, -6);
+    voice(time, mfreq(n),   dur, "triangle", 0.026, 1.5,  7);
+  }
+  voice(time, mfreq(notes[0]+12), dur*0.85, "sine", 0.018, 1.7, 0); // faint upper shimmer
+}
+function subPulse(time,vol){
+  const a=AC, o=a.createOscillator(), g=a.createGain();
+  o.type="sine"; o.frequency.setValueAtTime(78,time); o.frequency.exponentialRampToValueAtTime(38,time+0.22);
+  g.gain.setValueAtTime(0.0001,time); g.gain.exponentialRampToValueAtTime(vol,time+0.03); g.gain.exponentialRampToValueAtTime(0.0001,time+0.5);
+  o.connect(g); g.connect(dryG); o.start(time); o.stop(time+0.55);
+}
+// --- percussion (kicks in / layers up with score) ---
+function kick(time,vol){
+  const a=AC, o=a.createOscillator(), g=a.createGain();
+  o.type="sine"; o.frequency.setValueAtTime(155,time); o.frequency.exponentialRampToValueAtTime(48,time+0.08);
+  g.gain.setValueAtTime(0.0001,time); g.gain.exponentialRampToValueAtTime(vol,time+0.006); g.gain.exponentialRampToValueAtTime(0.0001,time+0.2);
+  o.connect(g); g.connect(dryG); o.start(time); o.stop(time+0.24);
+}
+function hat(time,vol){
+  const a=AC, s=a.createBufferSource(), hp=a.createBiquadFilter(), g=a.createGain();
+  s.buffer=noiseBuf; hp.type="highpass"; hp.frequency.value=7500;
+  g.gain.setValueAtTime(vol,time); g.gain.exponentialRampToValueAtTime(0.0001,time+0.045);
+  s.connect(hp); hp.connect(g); g.connect(dryG); s.start(time); s.stop(time+0.06);
+}
+function clap(time,vol){
+  const a=AC, s=a.createBufferSource(), bp=a.createBiquadFilter(), g=a.createGain();
+  s.buffer=noiseBuf; bp.type="bandpass"; bp.frequency.value=1900; bp.Q.value=0.8;
+  g.gain.setValueAtTime(0.0001,time); g.gain.exponentialRampToValueAtTime(vol,time+0.005); g.gain.exponentialRampToValueAtTime(0.0001,time+0.14);
+  s.connect(bp); bp.connect(g); g.connect(dryG); g.connect(revSend); s.start(time); s.stop(time+0.17);
+}
+function snare(time,vol){
+  const a=AC;
+  // noisy body
+  const s=a.createBufferSource(), hp=a.createBiquadFilter(), g=a.createGain();
+  s.buffer=noiseBuf; hp.type="highpass"; hp.frequency.value=1600;
+  g.gain.setValueAtTime(0.0001,time); g.gain.exponentialRampToValueAtTime(vol,time+0.004); g.gain.exponentialRampToValueAtTime(0.0001,time+0.17);
+  s.connect(hp); hp.connect(g); g.connect(dryG); g.connect(revSend); s.start(time); s.stop(time+0.19);
+  // tonal crack for punch
+  const o=a.createOscillator(), g2=a.createGain();
+  o.type="triangle"; o.frequency.setValueAtTime(195,time); o.frequency.exponentialRampToValueAtTime(120,time+0.07);
+  g2.gain.setValueAtTime(0.0001,time); g2.gain.exponentialRampToValueAtTime(vol*0.6,time+0.004); g2.gain.exponentialRampToValueAtTime(0.0001,time+0.11);
+  o.connect(g2); g2.connect(dryG); o.start(time); o.stop(time+0.13);
+}
+function bassNote(time,freq,dur,vol){
+  const a=AC, o=a.createOscillator(), f=a.createBiquadFilter(), g=a.createGain();
+  o.type="triangle"; o.frequency.value=freq; f.type="lowpass"; f.frequency.value=420;
+  g.gain.setValueAtTime(0.0001,time); g.gain.exponentialRampToValueAtTime(vol,time+0.02); g.gain.exponentialRampToValueAtTime(0.0001,time+dur);
+  o.connect(f); f.connect(g); g.connect(dryG); o.start(time); o.stop(time+dur+0.05);
+}
+function startDrone(){
+  const a=AC; if(droneA) return;
+  droneGain=a.createGain(); droneGain.gain.value=0.0001; droneGain.connect(dryG); droneGain.connect(revSend);
+  droneA=a.createOscillator(); droneA.type="sine";     droneA.frequency.value=mfreq(33); droneA.detune.value=-4;
+  droneB=a.createOscillator(); droneB.type="triangle"; droneB.frequency.value=mfreq(45); droneB.detune.value=5;
+  droneA.connect(droneGain); droneB.connect(droneGain); droneA.start(); droneB.start();
+  droneGain.gain.setTargetAtTime(0.055, a.currentTime, 1.4);
+}
+function stopDrone(){
+  const a=AC; if(!droneA) return;
+  droneGain.gain.setTargetAtTime(0.0001, a.currentTime, 0.5);
+  const dA=droneA, dB=droneB; setTimeout(()=>{ try{dA.stop();dB.stop();}catch(e){} },1600);
+  droneA=null; droneB=null;
+}
+function musicScheduler(){
+  const a=AC; if(!a) return;
+  const s=score, intensity=Math.min(s,150)/150;       // 0..1, drives layering/tension
+  const bpm=62+Math.min(s,280)*0.32;                   // 62 → ~152 BPM, keeps accelerating the deeper you get
+  const spb=60/bpm;
+  musicLP.frequency.setTargetAtTime(850+intensity*1350, a.currentTime, 0.6);      // opens up as you climb
+  musicBus.gain.setTargetAtTime(0.42+intensity*0.26, a.currentTime, 0.7);         // whole mix grows louder as you climb
+  while(nextBeat < a.currentTime+0.3){
+    const bar=Math.floor(beatN/4)%PROG.length, inBar=beatN%4;
+    if(inBar===0) padChord(nextBeat, PROG[bar], spb*4.6);          // evolving pad each bar
+
+    // rhythm section escalates in tiers
+    if(s<30){
+      if(inBar===0 || (inBar===2 && intensity>0.25)) subPulse(nextBeat, 0.05+intensity*0.11); // ambient heartbeat
+    } else {
+      kick(nextBeat, 0.17+intensity*0.13);                                        // 30+: beat drops (four-on-the-floor)
+      if(s>=50 && (inBar===1||inBar===3)){                                        // 50+: backbeat SNARE
+        snare(nextBeat, 0.17+intensity*0.11);
+        if(s>=80) clap(nextBeat, 0.06+intensity*0.05);                            // 80+: layer a clap to fatten it
+      }
+      if(s>=65) hat(nextBeat+spb*0.5, 0.05+intensity*0.05);                       // 65+: offbeat hats
+      if(s>=95) hat(nextBeat, 0.03+intensity*0.03);                               // 95+: driving eighths
+      if(s>=70 && bar===3 && inBar===3){                                          // snare fill before the loop turns over
+        snare(nextBeat+spb*0.5, 0.13+intensity*0.06);
+        if(s>=100) snare(nextBeat+spb*0.75, 0.11+intensity*0.06);
+      }
+    }
+    if(s>=40 && (inBar===0||inBar===2))                                           // 40+: driving bassline
+      bassNote(nextBeat, mfreq(PROG[bar][0]-12), spb*0.95, 0.08+intensity*0.05);
+
+    if(Math.random() < 0.10+intensity*0.5){                        // sparse bell/motif
+      const deg=SCALE[(Math.random()*SCALE.length)|0], oct=Math.random()<0.5?69:81;
+      voice(nextBeat+(Math.random()<0.5?0:spb*0.5), mfreq(oct+deg), 1.5, "triangle", 0.045+intensity*0.03, 0.02, (Math.random()*10-5));
+    }
+    beatN++; nextBeat+=spb;
+  }
+}
+function musicStart(){
+  const a=musicInit(); if(!a||!musicOn) return;
+  if(a.resume) a.resume();
+  nextBeat=a.currentTime+0.12; beatN=0;
+  musicBus.gain.cancelScheduledValues(a.currentTime);
+  musicBus.gain.setTargetAtTime(0.5, a.currentTime, 1.1);   // slow cinematic fade-in
+  startDrone();
+  if(!musicTimer) musicTimer=setInterval(musicScheduler,60);
+}
+function musicStop(){
+  const a=AC; if(a&&musicBus) musicBus.gain.setTargetAtTime(0.0001, a.currentTime, 0.6); // gentle fade-out
+  stopDrone();
+  if(musicTimer){ clearInterval(musicTimer); musicTimer=null; }
+}
+function musicToggle(){
+  musicOn=!musicOn; localStorage.setItem("orbit_music", musicOn?"1":"0");
+  if(musicOn){ if(state===ST.PLAY) musicStart(); } else musicStop();
+  if(muteEl) muteEl.classList.toggle("muted", !musicOn);
+}
+
+// ---- state ----
+const ST={MENU:0,PLAY:1,DEAD:2};
+let state=ST.MENU;
+let best=parseInt(localStorage.getItem("orbit_best")||"0",10)||0;
+bestLineEl.textContent="best "+best;
+
+let ball, dir, speed, score, combo, gold, spikes, particles, ringPulse, shake, t, spawnT, deadT, flashAlpha, newBest, flipKick;
+let rockets, fw, showLeft, showTimer, showGap, showBigEvery;
+let powerups, puTimer, hasShield, slowT, doubleT, puLabel, puLabelT;
+
+function reset(){
+  ball={a:-Math.PI/2}; dir=1; speed=2.6; score=0; combo=0;
+  gold=null; spikes=[]; particles=[]; ringPulse=0; shake=0; t=0; spawnT=0; deadT=0; flashAlpha=0; newBest=false; flipKick=0;
+  rockets=[]; fw=[]; showLeft=0; showTimer=0; showGap=0.4; showBigEvery=99;
+  powerups=[]; puTimer=9; hasShield=false; slowT=0; doubleT=0; puLabel=""; puLabelT=0;
+  spawnGold();
+}
+// power-up types you can tag on the ring
+const POWERS=[
+  {key:"shield", col:"#4ad6ff", glyph:"S",  label:"SHIELD"},
+  {key:"slow",   col:"#b388ff", glyph:"≈",  label:"SLOW-MO"},
+  {key:"x2",     col:"#34d399", glyph:"2",  label:"DOUBLE"}
+];
+function powerByKey(k){ for(const p of POWERS) if(p.key===k) return p; }
+function spawnPowerup(){
+  // after 50 the game is fast, so weight spawns toward slow-mo
+  let type;
+  if(score>=50 && Math.random()<0.55) type=powerByKey("slow");
+  else type=POWERS[(Math.random()*POWERS.length)|0];
+  powerups.push({a:randAngle(ball.a,0.8), type, pop:0, life:7.5});
+}
+function collectPowerup(key){
+  sPower(); ringPulse=1;
+  const p=ballPos(), col=powerByKey(key).col;
+  for(let i=0;i<16;i++) spawnParticle(p.x,p.y,col,2.4);
+  if(key==="shield"){ hasShield=true; puLabel="SHIELD UP"; }
+  else if(key==="slow"){ slowT=4.5; puLabel="SLOW-MO"; }
+  else { doubleT=6.5; puLabel="DOUBLE POINTS"; }
+  puLabelT=1.5;
+}
+function angDist(a,b){ return Math.abs(((a-b+Math.PI)%(Math.PI*2))-Math.PI); }
+function randAngle(awayFrom,minGap){
+  for(let i=0;i<30;i++){
+    const a=Math.random()*Math.PI*2;
+    let d=Math.abs(((a-awayFrom+Math.PI)%(Math.PI*2))-Math.PI);
+    if(d>minGap) return a;
+  }
+  return Math.random()*Math.PI*2;
+}
+function spawnGold(){
+  gold={a:randAngle(ball.a,0.9), pop:0, got:false};
+}
+function spawnSpike(){
+  // place ahead in travel direction so it's reachable but threatening
+  const ahead=ball.a + dir*(0.6+Math.random()*1.6);
+  spikes.push({a:ahead, life:0, born:0, warn:0.5});
+}
+
+// ---- input ----
+function flip(){
+  if(state===ST.PLAY){
+    dir*=-1; ringPulse=1; flipKick=1; sFlip();
+    for(let i=0;i<6;i++)spawnParticle(ballPos().x,ballPos().y,"#7aa8ff",1.2);
+  } else if(state===ST.MENU){ startGame(); }
+  else if(state===ST.DEAD){ if(!awaitingName && t-deadT>0.35) startGame(); }
+}
+function startGame(){
+  actx();
+  awaitingName=false;
+  if(nameEntryEl) nameEntryEl.classList.add("hidden");
+  if(againPulseEl) againPulseEl.classList.remove("hidden");
+  reset(); state=ST.PLAY;
+  startEl.classList.add("hidden"); overEl.classList.add("hidden");
+  if(eggEl){ eggEl.classList.add("show"); eggEl.play().catch(()=>{}); eggSpeed(); }
+  musicStart();
+  bumpPlays();   // count this play worldwide
+}
+function die(){
+  state=ST.DEAD; deadT=t; shake=18; flashAlpha=0.9; sCrash();
+  if(eggEl) eggEl.classList.remove("show");
+  musicStop();
+  const p=ballPos();
+  for(let i=0;i<40;i++)spawnParticle(p.x,p.y,Math.random()<0.5?"#ff3b6b":"#ffd24a",4);
+  if(score>best){ best=score; newBest=true; localStorage.setItem("orbit_best",String(best)); }
+  finalScoreEl.textContent=score;
+  bestLineEl.innerHTML = newBest ? '<span class="new">★ new best '+best+' ★</span>' : "best "+best;
+
+  // fireworks show — more shells, denser barrage, bigger bursts the higher you scored
+  showLeft   = Math.min(60, Math.floor(score/6));
+  showGap    = Math.max(0.14, 0.55 - score*0.002);
+  showBigEvery = score>=120 ? 2 : score>=75 ? 3 : 4;
+  showTimer  = 0.25;
+  const tierWord=tierFor(score);
+  tierEl.textContent=tierWord;
+  tierEl.style.fontSize=(16+Math.min(score,160)*0.12)+"px";
+
+  // world record? offer name entry; otherwise just show the world best to beat
+  awaitingName = (score > globalBest.score && score > 0);
+  if(awaitingName){
+    if(nameEntryEl) nameEntryEl.classList.remove("hidden");
+    if(againPulseEl) againPulseEl.classList.add("hidden");
+    if(worldLineEl) worldLineEl.textContent = globalBest.score>0
+      ? ("you beat "+globalBest.score+" · "+globalBest.name+"!") : "first world best ever!";
+    if(nameSubmitEl){ nameSubmitEl.disabled=false; nameSubmitEl.textContent="SAVE"; }
+    setTimeout(()=>{ try{ nameInputEl.focus(); }catch(e){} }, 250);
+  } else {
+    if(nameEntryEl) nameEntryEl.classList.add("hidden");
+    if(againPulseEl) againPulseEl.classList.remove("hidden");
+    if(worldLineEl) worldLineEl.textContent = worldText();
+  }
+
+  setTimeout(()=>overEl.classList.remove("hidden"),120);
+}
+window.addEventListener("pointerdown",e=>{e.preventDefault();flip();},{passive:false});
+window.addEventListener("keydown",e=>{ if(e.repeat||awaitingName) return; if(e.code==="Space"||e.code==="ArrowUp"||e.code==="Enter"){e.preventDefault();flip();} });
+if(muteEl){
+  muteEl.textContent = "♪";
+  muteEl.classList.toggle("muted", !musicOn);
+  muteEl.addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); actx(); musicToggle(); });
+}
+// ---- world-record name entry ----
+function submitScore(){
+  const nm=(((nameInputEl&&nameInputEl.value)||"").trim())||"ANON";
+  const sc=Math.max(0,score|0);
+  if(nameSubmitEl){ nameSubmitEl.disabled=true; nameSubmitEl.textContent="…"; }
+  const body=new URLSearchParams(); body.set("score",sc); body.set("name",nm);
+  fetch("score.php",{method:"POST",body})
+    .then(r=>r.json())
+    .then(d=>{ globalBest=(d&&typeof d.score==="number")?{score:d.score,name:d.name||nm}:{score:sc,name:nm}; })
+    .catch(()=>{ globalBest={score:sc,name:nm}; })
+    .then(endName);
+}
+function endName(){
+  awaitingName=false;
+  if(nameEntryEl) nameEntryEl.classList.add("hidden");
+  if(againPulseEl) againPulseEl.classList.remove("hidden");
+  if(nameSubmitEl){ nameSubmitEl.disabled=false; nameSubmitEl.textContent="SAVE"; }
+  if(worldLineEl) worldLineEl.textContent=worldText();
+  updateWorldUI();
+}
+function skipName(){
+  awaitingName=false;
+  if(nameEntryEl) nameEntryEl.classList.add("hidden");
+  if(againPulseEl) againPulseEl.classList.remove("hidden");
+  if(worldLineEl) worldLineEl.textContent=worldText();
+}
+if(nameSubmitEl) nameSubmitEl.addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); submitScore(); });
+if(nameSkipEl) nameSkipEl.addEventListener("pointerdown",e=>{ e.preventDefault(); e.stopPropagation(); skipName(); });
+if(nameInputEl){
+  nameInputEl.addEventListener("pointerdown",e=>{ e.stopPropagation(); });
+  nameInputEl.addEventListener("keydown",e=>{ e.stopPropagation(); if(e.key==="Enter"){ e.preventDefault(); submitScore(); } });
+}
+
+// ---- particles ----
+function spawnParticle(x,y,col,sp){
+  const ang=Math.random()*Math.PI*2, v=(0.5+Math.random())*sp;
+  particles.push({x,y,vx:Math.cos(ang)*v,vy:Math.sin(ang)*v,life:1,col,sz:1+Math.random()*2.5});
+}
+function ballPos(){ return {x:CX+Math.cos(ball.a)*R, y:CY+Math.sin(ball.a)*R}; }
+
+// ---- fireworks (score-scaled celebration) ----
+function launchRocket(big){
+  const x=W*(0.14+Math.random()*0.72);
+  const targetY=H*(0.13+Math.random()*0.26);   // burst in the upper third
+  // enough lift to actually climb to the target before apex
+  const rise=Math.sqrt(2*0.16*(H-targetY))+1.5;
+  rockets.push({x, y:H+10, vx:(Math.random()-0.5)*0.8, vy:-rise, targetY, hue:Math.floor(Math.random()*360), big});
+  sLaunch();
+}
+function burst(x,y,hue,big){
+  // size of the burst scales with score
+  const base=22+Math.min(score,180)*0.45;          // ~22 small … ~103 at score 180
+  const n=Math.round((big?1.7:1)*base);
+  const power=(big?1.25:1)*(3.2+Math.min(score,160)*0.012);
+  const rings=big?2:1;
+  for(let r=0;r<rings;r++){
+    const h=(hue+r*40)%360, spd=power*(r===0?1:0.6);
+    for(let i=0;i<n;i++){
+      const a=Math.random()*Math.PI*2, v=spd*(0.35+Math.random());
+      const white=Math.random()<0.12;
+      fw.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,max:0.9+Math.random()*0.7,
+               col:white?"255,255,255":hsl(h,90,60), sz:1.2+Math.random()*2.2, grav:0.045});
+    }
+  }
+  shake=Math.max(shake,big?9:5);
+  sBoom(big);
+}
+function hsl(h,s,l){ // -> "r,g,b" for rgba()
+  s/=100; l/=100; const k=n=>(n+h/30)%12, aa=s*Math.min(l,1-l);
+  const f=n=>l-aa*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return Math.round(f(0)*255)+","+Math.round(f(8)*255)+","+Math.round(f(4)*255);
+}
+function updateFireworks(dt){
+  // scheduler: drip out shells across the show; tighter gap = denser finale
+  if(showLeft>0){
+    showTimer-=dt;
+    if(showTimer<=0){
+      showLeft--;
+      const big = (showLeft % showBigEvery)===0;
+      launchRocket(big);
+      showTimer=showGap*(0.6+Math.random()*0.8);
+    }
+  }
+  // rockets rise then explode at apex / target
+  for(let i=rockets.length-1;i>=0;i--){
+    const r=rockets[i];
+    r.x+=r.vx; r.y+=r.vy; r.vy+=0.16;
+    // sparkle trail
+    fw.push({x:r.x,y:r.y,vx:(Math.random()-0.5)*0.6,vy:(Math.random()-0.5)*0.6,life:1,max:0.4,
+             col:"255,235,170",sz:1.4,grav:0.02});
+    if(r.vy>=-1.2 || r.y<=r.targetY){ burst(r.x,r.y,r.hue,r.big); rockets.splice(i,1); }
+  }
+  // burst particles
+  for(let i=fw.length-1;i>=0;i--){
+    const p=fw[i];
+    p.x+=p.vx; p.y+=p.vy; p.vx*=0.97; p.vy=p.vy*0.97+p.grav; p.life-=dt/p.max;
+    if(p.life<=0)fw.splice(i,1);
+  }
+}
+function renderFireworks(){
+  ctx.globalCompositeOperation="lighter";
+  for(const p of fw){
+    const a=Math.max(0,p.life);
+    ctx.fillStyle="rgba("+p.col+","+(a*0.9)+")";
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.sz*(0.6+a*0.6),0,Math.PI*2); ctx.fill();
+  }
+  for(const r of rockets){
+    ctx.fillStyle="rgba(255,240,200,0.95)";
+    ctx.beginPath(); ctx.arc(r.x,r.y,2.4,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalCompositeOperation="source-over";
+}
+function tierFor(s){
+  if(s>=150) return "LEGENDARY";
+  if(s>=100) return "SPECTACULAR";
+  if(s>=75)  return "ON FIRE";
+  if(s>=50)  return "GREAT RUN";
+  if(s>=25)  return "NICE!";
+  return "";
+}
+
+// ---- loop ----
+let last=performance.now();
+function frame(now){
+  const dt=Math.min((now-last)/1000,0.05); last=now;
+  t+=dt;
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+function update(dt){
+  ringPulse=Math.max(0,ringPulse-dt*3);
+  shake=Math.max(0,shake-dt*40);
+  flashAlpha=Math.max(0,flashAlpha-dt*2.2);
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vx*=0.94; p.vy*=0.94; p.life-=dt*1.6;
+    if(p.life<=0)particles.splice(i,1);
+  }
+  if(state===ST.DEAD) updateFireworks(dt);
+  if(state!==ST.PLAY) return;
+
+  eggSpeed();  // egg dances faster as score climbs
+  // active power-up timers
+  slowT=Math.max(0,slowT-dt); doubleT=Math.max(0,doubleT-dt); puLabelT=Math.max(0,puLabelT-dt);
+  // move — base speed, flip-dart, and slow-mo power-up
+  flipKick=Math.max(0,flipKick-dt*8);
+  const angSpeed=(speed/R)*(1+score*0.012)*(1+flipKick*0.85)*(slowT>0?0.5:1);
+  ball.a+=dir*angSpeed*dt*60;
+  ball.a=(ball.a+Math.PI*2)%(Math.PI*2);
+
+  // gold collect
+  if(gold){
+    gold.pop=Math.min(1,gold.pop+dt*5);
+    let d=Math.abs(((ball.a-gold.a+Math.PI)%(Math.PI*2))-Math.PI);
+    if(d<0.18){
+      combo++; let pts=(1+Math.floor(combo/3))*(doubleT>0?2:1); score+=pts;
+      sPickup(combo); ringPulse=1; speed=Math.min(speed+0.12,7.5);
+      const p=ballPos();
+      for(let i=0;i<14;i++)spawnParticle(p.x,p.y,doubleT>0?"#34d399":"#ffd24a",2.5);
+      spawnGold();
+      // every few golds add a spike, scaling difficulty
+      if(score>3 && Math.random()<0.55+Math.min(score*0.01,0.3)) spawnSpike();
+      if(score>14 && Math.random()<0.4) spawnSpike();
+    }
+  }
+  // power-ups: spawn on a timer, age out, and get tagged when the ball passes over
+  puTimer-=dt;
+  if(puTimer<=0 && powerups.length===0 && score>=30){ spawnPowerup(); puTimer=(score>=50?6:10)+Math.random()*(score>=50?5:8); }
+  for(let i=powerups.length-1;i>=0;i--){
+    const p=powerups[i]; p.pop=Math.min(1,p.pop+dt*5); p.life-=dt;
+    if(angDist(ball.a,p.a)<0.18){ collectPowerup(p.type.key); powerups.splice(i,1); continue; }
+    if(p.life<=0) powerups.splice(i,1);
+  }
+  // spikes
+  for(let i=spikes.length-1;i>=0;i--){
+    const s=spikes[i]; s.life+=dt; s.warn=Math.max(0,s.warn-dt);
+    if(s.warn<=0 && angDist(ball.a,s.a)<0.16){
+      if(hasShield){                                  // shield absorbs one hit
+        hasShield=false; spikes.splice(i,1); shake=9; ringPulse=1; sShieldBreak();
+        puLabel="BLOCKED"; puLabelT=1.1;
+        const p=ballPos(); for(let k=0;k<18;k++)spawnParticle(p.x,p.y,"#4ad6ff",3);
+        continue;
+      }
+      die(); return;
+    }
+    if(s.life>9) spikes.splice(i,1);
+  }
+}
+
+function render(){
+  ctx.clearRect(0,0,W,H);
+  let sx=0,sy=0;
+  if(shake>0){ sx=(Math.random()-0.5)*shake; sy=(Math.random()-0.5)*shake; }
+  ctx.save(); ctx.translate(sx,sy);
+
+  // bg vignette
+  const g=ctx.createRadialGradient(CX,CY,R*0.2,CX,CY,Math.max(W,H)*0.7);
+  g.addColorStop(0,"rgba(30,40,70,0.5)"); g.addColorStop(1,"rgba(8,8,20,0)");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // ring
+  ctx.lineWidth=3+ringPulse*5;
+  ctx.strokeStyle=`rgba(120,168,255,${0.25+ringPulse*0.5})`;
+  ctx.shadowBlur=18+ringPulse*30; ctx.shadowColor="#7aa8ff";
+  ctx.beginPath(); ctx.arc(CX,CY,R,0,Math.PI*2); ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // mystical sigil in the center — full on the menu, a subtle echo during play
+  if(state===ST.MENU) drawSigil(CX,CY, R*0.52, 1.0, true);
+  else if(state===ST.PLAY) drawSigil(CX,CY, R*0.5, 0.28, false);
+
+  // score (center) — only while playing; the game-over overlay owns the screen on death
+  if(state===ST.PLAY){
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillStyle="rgba(232,240,255,0.92)";
+    ctx.font="800 "+Math.round(R*0.5)+"px -apple-system,Segoe UI,Roboto,sans-serif";
+    ctx.fillText(score,CX,CY+2);
+    if(combo>=3){
+      ctx.font="700 "+Math.round(R*0.13)+"px -apple-system,Segoe UI,Roboto,sans-serif";
+      ctx.fillStyle="#ffd24a"; ctx.fillText("×"+(1+Math.floor(combo/3))+" combo",CX,CY+R*0.42);
+    }
+    // power-up pickup toast
+    if(puLabelT>0){
+      ctx.globalAlpha=Math.min(1,puLabelT*1.6);
+      ctx.font="800 "+Math.round(R*0.15)+"px -apple-system,Segoe UI,Roboto,sans-serif";
+      ctx.fillStyle="#e8f0ff"; ctx.fillText(puLabel, CX, CY-R*0.62);
+      ctx.globalAlpha=1;
+    }
+    // active-effect chips
+    const chips=[];
+    if(hasShield) chips.push(["◇ SHIELD","#4ad6ff"]);
+    if(slowT>0)   chips.push(["≈ SLOW "+Math.ceil(slowT),"#b388ff"]);
+    if(doubleT>0) chips.push(["×2 "+Math.ceil(doubleT),"#34d399"]);
+    if(chips.length){
+      ctx.font="700 "+Math.round(R*0.085)+"px -apple-system,Segoe UI,Roboto,sans-serif";
+      const gap=R*0.07, w=chips.map(c=>ctx.measureText(c[0]).width);
+      let x=CX-(w.reduce((a,b)=>a+b,0)+gap*(chips.length-1))/2;
+      ctx.textAlign="left";
+      for(let i=0;i<chips.length;i++){ ctx.fillStyle=chips[i][1]; ctx.fillText(chips[i][0],x,CY+R*0.6); x+=w[i]+gap; }
+      ctx.textAlign="center";
+    }
+  }
+
+  // gold
+  if(gold && state===ST.PLAY){
+    const gx=CX+Math.cos(gold.a)*R, gy=CY+Math.sin(gold.a)*R;
+    const ps=8+Math.sin(t*6)*1.5;
+    ctx.shadowBlur=22; ctx.shadowColor="#ffd24a";
+    ctx.fillStyle="#ffd24a";
+    star(gx,gy,5,ps*gold.pop,ps*0.45*gold.pop,t*1.5);
+    ctx.shadowBlur=0;
+  }
+
+  // power-ups on the ring
+  if(state===ST.PLAY) for(const pu of powerups){
+    const x=CX+Math.cos(pu.a)*R, y=CY+Math.sin(pu.a)*R, col=pu.type.col;
+    const blink = pu.life<1.6 ? (0.35+0.65*Math.abs(Math.sin(t*12))) : 1;
+    const rad=(12+Math.sin(t*5)*1.2)*pu.pop;
+    ctx.globalAlpha=blink;
+    ctx.shadowBlur=20; ctx.shadowColor=col; ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(x,y,rad,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+    ctx.fillStyle="rgba(8,10,20,0.92)";
+    ctx.beginPath(); ctx.arc(x,y,Math.max(0.5,rad-3),0,Math.PI*2); ctx.fill();  // clamp: rad starts ~0 while popping in
+    ctx.fillStyle=col; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.font="700 "+Math.round(rad*1.15)+"px -apple-system,Segoe UI,Roboto,sans-serif";
+    ctx.fillText(pu.type.glyph, x, y+1);
+    ctx.globalAlpha=1;
+  }
+
+  // spikes
+  if(state===ST.PLAY) for(const s of spikes){
+    const x=CX+Math.cos(s.a)*R, y=CY+Math.sin(s.a)*R;
+    if(s.warn>0){
+      // warning telegraph
+      ctx.strokeStyle=`rgba(255,59,107,${0.3+0.5*Math.sin(t*20)})`;
+      ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y,12,0,Math.PI*2); ctx.stroke();
+    } else {
+      ctx.save(); ctx.translate(x,y); ctx.rotate(s.a+t*2);
+      ctx.fillStyle="rgba(255,59,107,0.25)"; star(0,0,3,17,7,0);  // cheap glow halo
+      ctx.fillStyle="#ff3b6b"; star(0,0,3,11,5,0);
+      ctx.restore();
+    }
+  }
+
+  // ball
+  if(state===ST.PLAY){
+    const p=ballPos();
+    // trail
+    for(let i=1;i<=6;i++){
+      const ta=ball.a - dir*0.05*i;
+      ctx.fillStyle=`rgba(54,224,196,${0.12*(6-i)/6})`;
+      ctx.beginPath(); ctx.arc(CX+Math.cos(ta)*R,CY+Math.sin(ta)*R,9-i,0,Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle="#36e0c4"; ctx.shadowBlur=20; ctx.shadowColor="#36e0c4";
+    ctx.beginPath(); ctx.arc(p.x,p.y,10,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle="rgba(255,255,255,0.85)";
+    ctx.beginPath(); ctx.arc(p.x-2.5,p.y-2.5,3,0,Math.PI*2); ctx.fill();
+    if(hasShield){                                    // shield halo
+      ctx.strokeStyle=`rgba(74,214,255,${0.55+0.3*Math.sin(t*8)})`;
+      ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(p.x,p.y,15,0,Math.PI*2); ctx.stroke();
+    }
+  }
+
+  // particles
+  for(const p of particles){
+    ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // fireworks celebration (game over)
+  if(state===ST.DEAD) renderFireworks();
+
+  ctx.restore();
+
+  // death flash
+  if(flashAlpha>0){
+    ctx.fillStyle=`rgba(255,59,107,${flashAlpha*0.5})`;
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+function star(cx,cy,spikesN,outer,inner,rot){
+  ctx.beginPath();
+  for(let i=0;i<spikesN*2;i++){
+    const r=i%2===0?outer:inner;
+    const a=rot+ i*Math.PI/spikesN;
+    const x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.closePath(); ctx.fill();
+}
+
+// ---- mystical sigil (rotating arcane seal in the ring's center) ----
+function sigilPoly(cx,cy,r,sides,rot,stroke,lw){
+  ctx.beginPath();
+  for(let i=0;i<sides;i++){
+    const a=rot+i/sides*Math.PI*2, x=cx+Math.cos(a)*r, y=cy+Math.sin(a)*r;
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.closePath(); ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.stroke();
+}
+function drawSigil(cx,cy,rs,alpha,glow){
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  const spin=t*0.14;
+  // soft central aura
+  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,rs);
+  g.addColorStop(0,"rgba(150,200,255,0.22)"); g.addColorStop(0.5,"rgba(120,168,255,0.06)"); g.addColorStop(1,"rgba(120,168,255,0)");
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,rs,0,Math.PI*2); ctx.fill();
+  if(glow){ ctx.shadowBlur=10; ctx.shadowColor="#7aa8ff"; }
+  // outer dashed ring
+  ctx.setLineDash([rs*0.05,rs*0.09]);
+  ctx.strokeStyle="rgba(122,168,255,0.7)"; ctx.lineWidth=1.4;
+  ctx.beginPath(); ctx.arc(cx,cy,rs*0.92,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  // rotating rune ticks
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(spin);
+  ctx.strokeStyle="rgba(122,168,255,0.55)"; ctx.lineWidth=1.4;
+  for(let i=0;i<12;i++){ const a=i/12*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a)*rs*0.78,Math.sin(a)*rs*0.78); ctx.lineTo(Math.cos(a)*rs*0.86,Math.sin(a)*rs*0.86); ctx.stroke(); }
+  ctx.restore();
+  // counter-rotating inner ring
+  if(glow) ctx.shadowColor="#36e0c4";
+  ctx.strokeStyle="rgba(54,224,196,0.6)"; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.arc(cx,cy,rs*0.5,0,Math.PI*2); ctx.stroke();
+  // rotating hexagram (two triangles) — sacred geometry
+  sigilPoly(cx,cy,rs*0.6,3,-spin*1.6,"rgba(54,224,196,0.5)",1.2);
+  sigilPoly(cx,cy,rs*0.6,3,-spin*1.6+Math.PI/3,"rgba(122,168,255,0.5)",1.2);
+  // orbiting motes
+  const cols=["#36e0c4","#7aa8ff","#ffd24a"];
+  for(let i=0;i<3;i++){ const a=t*0.5+i*(Math.PI*2/3), ox=cx+Math.cos(a)*rs*0.7, oy=cy+Math.sin(a)*rs*0.7;
+    if(glow){ ctx.shadowBlur=10; ctx.shadowColor=cols[i]; }
+    ctx.fillStyle=cols[i]; ctx.beginPath(); ctx.arc(ox,oy,rs*0.028,0,Math.PI*2); ctx.fill(); }
+  // pulsing core
+  if(glow){ ctx.shadowBlur=16; ctx.shadowColor="#bfe0ff"; }
+  const pr=rs*0.1*(1+Math.sin(t*2)*0.18);
+  ctx.fillStyle="rgba(230,240,255,0.9)"; ctx.beginPath(); ctx.arc(cx,cy,pr,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+reset();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
