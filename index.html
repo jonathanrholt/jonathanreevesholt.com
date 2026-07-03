@@ -189,6 +189,15 @@ function sBoom(big){
   const n=big?5:3;
   for(let i=0;i<n;i++) setTimeout(()=>beep(700+Math.random()*900,0.05,"square",0.025),60+i*45);
 }
+function sWhoosh(){   // near-miss dodge cue — filtered noise sweep; plays even if music is muted, like the other SFX above
+  const a=AC; if(!a||!noiseBuf) return;
+  const s=a.createBufferSource(), bp=a.createBiquadFilter(), g=a.createGain();
+  s.buffer=noiseBuf; bp.type="bandpass"; bp.Q.value=1.2;
+  const t0=a.currentTime;
+  bp.frequency.setValueAtTime(2400,t0); bp.frequency.exponentialRampToValueAtTime(650,t0+0.13);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.06,t0+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.15);
+  s.connect(bp); bp.connect(g); g.connect(a.destination); s.start(t0); s.stop(t0+0.17);
+}
 
 // ---- ambient cinematic music (Web Audio, no assets; atmosphere builds with score) ----
 // Signal chain: voices -> [dry + reverb send] -> master bus -> lowpass -> limiter -> out.
@@ -365,6 +374,7 @@ bestLineEl.textContent="best "+best;
 let ball, dir, speed, score, combo, gold, spikes, particles, ringPulse, shake, t, spawnT, deadT, flashAlpha, newBest, flipKick;
 let rockets, fw, showLeft, showTimer, showGap, showBigEvery;
 let powerups, puTimer, shieldCount, slowT, doubleT, fireT, expandT, puLabel, puLabelT;
+let comboTier, comboPopT, bursts, hitStopT;
 
 function reset(){
   ball={a:-Math.PI/2}; dir=1; speed=2.6; score=0; combo=0;
@@ -372,8 +382,10 @@ function reset(){
   rockets=[]; fw=[]; showLeft=0; showTimer=0; showGap=0.4; showBigEvery=99;
   powerups=[]; puTimer=9; shieldCount=0; slowT=0; doubleT=0; fireT=0; expandT=0; ringScale=1; R=baseR;
   puLabel=""; puLabelT=0;
+  comboTier=0; comboPopT=0; bursts=[]; hitStopT=0;
   spawnGold();
 }
+function spawnBurst(x,y,col,maxR){ bursts.push({x,y,col,maxR:maxR||34,age:0}); }   // quick expanding ring, used on pickups
 // power-up types you can tag on the ring
 const POWERS=[
   {key:"shield", col:"#4ad6ff", glyph:"S",  label:"SHIELD"},
@@ -397,6 +409,7 @@ function collectPowerup(key){
   sPower(); ringPulse=1;
   const p=ballPos(), col=powerByKey(key).col;
   for(let i=0;i<16;i++) spawnParticle(p.x,p.y,col,2.4);
+  spawnBurst(p.x,p.y,col,36);
   if(key==="shield"){ shieldCount++; puLabel = shieldCount>1 ? ("SHIELD ×"+shieldCount) : "SHIELD UP"; }
   else if(key==="slow"){ slowT = 5 + (Math.min(Math.max(score,75),200)-75)/125*10; puLabel="SLOW-MO"; } // 5s at 75 → up to 15s at 200+
   else if(key==="x2"){ doubleT=6.5; puLabel="DOUBLE POINTS"; }
@@ -423,7 +436,7 @@ function spawnGold(){
 function spawnSpike(){
   // place ahead in travel direction so it's reachable but threatening
   const ahead=ball.a + dir*(0.6+Math.random()*1.6);
-  spikes.push({a:ahead, life:0, born:0, warn:0.5});
+  spikes.push({a:ahead, life:0, born:0, warn:0.5, near:false});
 }
 
 // ---- input ----
@@ -445,7 +458,7 @@ function startGame(){
   bumpPlays();   // count this play worldwide
 }
 function die(){
-  state=ST.DEAD; deadT=t; shake=18; flashAlpha=0.9; sCrash();
+  state=ST.DEAD; deadT=t; shake=18; flashAlpha=0.9; hitStopT=0.09; sCrash();   // brief freeze-frame for impact
   musicStop();
   const p=ballPos();
   for(let i=0;i<40;i++)spawnParticle(p.x,p.y,Math.random()<0.5?"#ff3b6b":"#ffd24a",4);
@@ -610,7 +623,9 @@ function tierFor(s){
 // ---- loop ----
 let last=performance.now();
 function frame(now){
-  const dt=Math.min((now-last)/1000,0.05); last=now;
+  const rawDt=Math.min((now-last)/1000,0.05); last=now;
+  let dt=rawDt;
+  if(hitStopT>0){ hitStopT=Math.max(0,hitStopT-rawDt); dt=rawDt*0.06; }   // brief freeze-frame on death impact
   t+=dt;
   update(dt);
   render();
@@ -625,6 +640,7 @@ function update(dt){
     p.x+=p.vx; p.y+=p.vy; p.vx*=0.94; p.vy*=0.94; p.life-=dt*1.6;
     if(p.life<=0)particles.splice(i,1);
   }
+  for(let i=bursts.length-1;i>=0;i--){ const b=bursts[i]; b.age+=dt*2.6; if(b.age>=1) bursts.splice(i,1); }
   if(state===ST.DEAD) updateFireworks(dt);
   // ring-expand power-up: smoothly grow while active, ease back otherwise (also shrinks on death)
   const targetScale=(state===ST.PLAY && expandT>0)?1.4:1.0;
@@ -633,7 +649,7 @@ function update(dt){
   if(state!==ST.PLAY) return;
 
   // active power-up timers
-  slowT=Math.max(0,slowT-dt); doubleT=Math.max(0,doubleT-dt); fireT=Math.max(0,fireT-dt); expandT=Math.max(0,expandT-dt); puLabelT=Math.max(0,puLabelT-dt);
+  slowT=Math.max(0,slowT-dt); doubleT=Math.max(0,doubleT-dt); fireT=Math.max(0,fireT-dt); expandT=Math.max(0,expandT-dt); puLabelT=Math.max(0,puLabelT-dt); comboPopT=Math.max(0,comboPopT-dt*3);
   if(fireT>0){ const bp=ballPos(); for(let i=0;i<2;i++)spawnParticle(bp.x,bp.y,Math.random()<0.5?"#ff7a1a":"#ffd24a",1.6); } // flame trail
   // move — base speed, flip-dart, and slow-mo power-up
   flipKick=Math.max(0,flipKick-dt*8);
@@ -648,8 +664,11 @@ function update(dt){
     if(d<0.18){
       combo++; let pts=(1+Math.floor(combo/3))*(doubleT>0?2:1); score+=pts;
       sPickup(combo); ringPulse=1; speed=Math.min(speed+0.12,7.5);
+      const newTier=Math.floor(combo/3);
+      if(newTier>comboTier){ comboTier=newTier; comboPopT=1; }   // pop the combo label when a new tier is reached
       const p=ballPos();
       for(let i=0;i<14;i++)spawnParticle(p.x,p.y,doubleT>0?"#34d399":"#ffd24a",2.5);
+      spawnBurst(p.x,p.y,doubleT>0?"#34d399":"#ffd24a",30);
       spawnGold();
       // every few golds add a spike, scaling difficulty
       if(score>3 && Math.random()<0.55+Math.min(score*0.01,0.3)) spawnSpike();
@@ -667,19 +686,26 @@ function update(dt){
   // spikes
   for(let i=spikes.length-1;i>=0;i--){
     const s=spikes[i]; s.life+=dt; s.warn=Math.max(0,s.warn-dt);
-    if(s.warn<=0 && angDist(ball.a,s.a)<0.16){
-      if(fireT>0){                                    // on fire: burn straight through the red
-        spikes.splice(i,1); sBurn(); ringPulse=1;
-        const p=ballPos(); for(let k=0;k<12;k++)spawnParticle(p.x,p.y,Math.random()<0.5?"#ff7a1a":"#ff3b6b",3);
-        continue;
+    if(s.warn<=0){
+      const d=angDist(ball.a,s.a);
+      if(d<0.16){
+        if(fireT>0){                                    // on fire: burn straight through the red
+          spikes.splice(i,1); sBurn(); ringPulse=1;
+          const p=ballPos(); for(let k=0;k<12;k++)spawnParticle(p.x,p.y,Math.random()<0.5?"#ff7a1a":"#ff3b6b",3);
+          continue;
+        }
+        if(shieldCount>0){                              // a shield absorbs one hit (they stack)
+          shieldCount--; spikes.splice(i,1); shake=9; ringPulse=1; sShieldBreak();
+          puLabel = shieldCount>0 ? ("BLOCKED · "+shieldCount+" left") : "BLOCKED"; puLabelT=1.1;
+          const p=ballPos(); for(let k=0;k<18;k++)spawnParticle(p.x,p.y,"#4ad6ff",3);
+          spawnBurst(p.x,p.y,"#4ad6ff",32);
+          continue;
+        }
+        die(); return;
+      } else if(d<0.34 && !s.near){                       // rewarded near-miss: close dodge, no contact
+        s.near=true; sWhoosh();
+        const p=ballPos(); for(let k=0;k<5;k++)spawnParticle(p.x,p.y,"#dfe7ff",1.6);
       }
-      if(shieldCount>0){                              // a shield absorbs one hit (they stack)
-        shieldCount--; spikes.splice(i,1); shake=9; ringPulse=1; sShieldBreak();
-        puLabel = shieldCount>0 ? ("BLOCKED · "+shieldCount+" left") : "BLOCKED"; puLabelT=1.1;
-        const p=ballPos(); for(let k=0;k<18;k++)spawnParticle(p.x,p.y,"#4ad6ff",3);
-        continue;
-      }
-      die(); return;
     }
     if(s.life>9) spikes.splice(i,1);
   }
@@ -714,8 +740,11 @@ function render(){
     ctx.font="800 "+Math.round(R*0.5)+"px -apple-system,Segoe UI,Roboto,sans-serif";
     ctx.fillText(score,CX,CY+2);
     if(combo>=3){
+      const pop=1+comboPopT*0.35;                        // brief scale pop when a new combo tier is reached
+      ctx.save(); ctx.translate(CX,CY+R*0.42); ctx.scale(pop,pop);
       ctx.font="700 "+Math.round(R*0.13)+"px -apple-system,Segoe UI,Roboto,sans-serif";
-      ctx.fillStyle="#ffd24a"; ctx.fillText("×"+(1+Math.floor(combo/3))+" combo",CX,CY+R*0.42);
+      ctx.fillStyle="#ffd24a"; ctx.fillText("×"+(1+Math.floor(combo/3))+" combo",0,0);
+      ctx.restore();
     }
     // power-up pickup toast
     if(puLabelT>0){
@@ -808,6 +837,14 @@ function render(){
   for(const p of particles){
     ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col;
     ctx.beginPath(); ctx.arc(p.x,p.y,p.sz,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // pickup burst rings — quick expanding fading ring on gold/power-up/shield-block
+  for(const b of bursts){
+    const rad=b.maxR*b.age, al=Math.max(0,1-b.age);
+    ctx.globalAlpha=al*0.8; ctx.strokeStyle=b.col; ctx.lineWidth=2.5*(1-b.age)+0.5;
+    ctx.beginPath(); ctx.arc(b.x,b.y,rad,0,Math.PI*2); ctx.stroke();
   }
   ctx.globalAlpha=1;
 
