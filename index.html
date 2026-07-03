@@ -418,7 +418,6 @@ function spawnGold(){
   gold={a:randAngle(ball.a,0.9), pop:0, got:false};
 }
 function spawnSpike(){
-  if(spikes.length>=11) return;   // cap live spikes so the ring never becomes an impassable wall
   // place ahead in travel direction so it's reachable but threatening
   const ahead=ball.a + dir*(0.6+Math.random()*1.6);
   spikes.push({a:ahead, life:0, born:0, warn:0.5});
@@ -635,7 +634,7 @@ function update(dt){
   if(fireT>0){ const bp=ballPos(); for(let i=0;i<2;i++)spawnParticle(bp.x,bp.y,Math.random()<0.5?"#ff7a1a":"#ffd24a",1.6); } // flame trail
   // move — base speed, flip-dart, and slow-mo power-up
   flipKick=Math.max(0,flipKick-dt*8);
-  const angSpeed=(speed/R)*(1+Math.min(score,250)*0.012)*(1+flipKick*0.85)*(slowT>0?0.5:1); // speed plateaus at ~4x by score 250 so high scores are reachable
+  const angSpeed=(speed/R)*(1+score*0.012)*(1+flipKick*0.85)*(slowT>0?0.5:1);
   ball.a+=dir*angSpeed*dt*60;
   ball.a=(ball.a+Math.PI*2)%(Math.PI*2);
 

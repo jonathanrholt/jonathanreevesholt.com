@@ -1,0 +1,52 @@
+[30-Jun-2026 13:21:08 UTC] Home directory set to: /home/homecut
+[30-Jun-2026 13:21:08 UTC] Binary directory: /home/homecut/bin, Manager path: /home/homecut/bin/ssl-manager
+[30-Jun-2026 13:21:08 UTC] API Base URL: https://externalautossl.service.spaceship.com/api/v1/externalautossl/user
+[30-Jun-2026 13:21:08 UTC] Download URL: https://ssl-manager.s3.amazonaws.com/bin/amd64/linux/ssl-manager
+[30-Jun-2026 13:21:10 UTC] Home directory set to: /home/homecut
+[30-Jun-2026 13:21:10 UTC] Binary directory: /home/homecut/bin, Manager path: /home/homecut/bin/ssl-manager
+[30-Jun-2026 13:21:10 UTC] API Base URL: https://externalautossl.service.spaceship.com/api/v1/externalautossl/user
+[30-Jun-2026 13:21:10 UTC] Download URL: https://ssl-manager.s3.amazonaws.com/bin/amd64/linux/ssl-manager
+[30-Jun-2026 13:21:10 UTC] Action received: install
+[30-Jun-2026 13:21:10 UTC] Install action initiated.
+[30-Jun-2026 13:21:10 UTC] Created bin directory: /home/homecut/bin
+[30-Jun-2026 13:21:10 UTC] Downloading manager binary from https://ssl-manager.s3.amazonaws.com/bin/amd64/linux/ssl-manager
+[30-Jun-2026 13:21:10 UTC] Trying file_get_contents method
+[30-Jun-2026 13:21:11 UTC] Downloaded manager binary using file_get_contents
+[30-Jun-2026 13:21:11 UTC] Manager installed successfully.
+[30-Jun-2026 13:21:11 UTC] Fetching manager info.
+[30-Jun-2026 13:21:11 UTC] Running command: /home/homecut/bin/ssl-manager info 2>/dev/null
+[30-Jun-2026 13:21:11 UTC] Manager info: Error: ssl-manager is not configured: no installation found at /home/homecut/.ssl-manager
+{"error": "Error: not configured: no installation found at /home/homecut/.ssl-manager"}
+
+[30-Jun-2026 13:21:40 UTC] Home directory set to: /home/homecut
+[30-Jun-2026 13:21:40 UTC] Binary directory: /home/homecut/bin, Manager path: /home/homecut/bin/ssl-manager
+[30-Jun-2026 13:21:40 UTC] API Base URL: https://externalautossl.service.spaceship.com/api/v1/externalautossl/user
+[30-Jun-2026 13:21:40 UTC] Download URL: https://ssl-manager.s3.amazonaws.com/bin/amd64/linux/ssl-manager
+[30-Jun-2026 13:21:40 UTC] Action received: register
+[30-Jun-2026 13:21:40 UTC] Running command: /home/homecut/bin/ssl-manager register -t 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjFkNmlmTUlzRlpTcU5GTzdkWDBkeTltanBqX21qX1NnZ084bng2ektQTHcifQ.eyJpc3MiOiJodHRwczovL2V4dGVybmFsYXV0b3NzbC5zZXJ2aWNlLnNwYWNlc2hpcC5jb20iLCJuYmYiOjE3ODI4MjU2MjIsImlhdCI6MTc4MjgyNTYyMiwiZXhwIjoxNzgyOTEyMDIyLCJhdWQiOlsiZXh0ZXJuYWxhdXRvc3NsIl0sInNjb3BlIjpbImV4dGVybmFsYXV0b3NzbC5leHRlcm5hbGF1dG9zc2wiLCJleHRlcm5hbGF1dG9zc2wudXNlci1pbnRlZ3JhdGlvbi1jcmVhdGUiXSwiY2xpZW50X2lkIjoiZXh0ZXJuYWwtc3NsLWNsaWVudCIsInN1YiI6IjExMTZhMzY4LTE1MjMtNDNiOC1hNjlkLWY0YWUwM2M1OTIxYiJ9.KL_XhpeSE2bVaWdnmWGwB1o1mZS-D8K7qoWE8cTONPJi2d9JcMk7YTARE9h7LKoyPZYrAoNzrhnGz8hR4AYLO2_FKt3F8fPtv9AWRVXXa0s_AACk_fDdx80UHpYG680VSyfZ5CzGM2sN87T_ITP2ygKDUNjRoM7tHC6eoMhC5c2NREYLtkRfvDNHmxJQMntO_F6N06mrilseOTX6qxOS9ew8L1doPHuXeedw1eN4BlNvmLCF265AEN4catpkBqxgvn6XGEvK9RW1NstJZEFN-Wgd_GTCHhbuYzh9wT7i1-X4_b2_c-KRvIvp5xt8VMqV9eIbIYBUajTNqykUPGCl_g' -u 'https://externalautossl.service.spaceship.com/api/v1/externalautossl/user/' 2>&1
+[30-Jun-2026 13:21:44 UTC] Registration output: Installing certificate manager
+Vendor registered successfully
+Integrated with control panel successfully
+Setting up cron job
+
+[30-Jun-2026 13:21:44 UTC] Fetching manager info.
+[30-Jun-2026 13:21:44 UTC] Running command: /home/homecut/bin/ssl-manager info 2>/dev/null
+[30-Jun-2026 13:21:45 UTC] Manager info: Control panel credentials found
+Vendor credentials found
+Cron is properly set up
+Manager is ready
+
+[30-Jun-2026 13:22:14 UTC] Home directory set to: /home/homecut
+[30-Jun-2026 13:22:14 UTC] Binary directory: /home/homecut/bin, Manager path: /home/homecut/bin/ssl-manager
+[30-Jun-2026 13:22:14 UTC] API Base URL: https://externalautossl.service.spaceship.com/api/v1/externalautossl/user
+[30-Jun-2026 13:22:14 UTC] Download URL: https://ssl-manager.s3.amazonaws.com/bin/amd64/linux/ssl-manager
+[30-Jun-2026 13:22:14 UTC] Action received: remove_installer
+[30-Jun-2026 13:22:14 UTC] Fetching manager info.
+[30-Jun-2026 13:22:14 UTC] Running command: /home/homecut/bin/ssl-manager info 2>/dev/null
+[30-Jun-2026 13:22:15 UTC] Manager info: Control panel credentials found
+Vendor credentials found
+Cron is properly set up
+Manager is ready
+
+[30-Jun-2026 13:22:15 UTC] Remove installer action initiated.
+[30-Jun-2026 13:22:15 UTC] Installer file removed.
