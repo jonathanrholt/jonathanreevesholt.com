@@ -142,13 +142,16 @@ function bumpPlays(){
 updatePlaysUI(); fetchPlays();
 
 let W=0,H=0,DPR=1,CX=0,CY=0,R=0,baseR=0,ringScale=1;
+const REF_R=240;   // fixed reference ring radius for game-speed math, so difficulty/reaction time feels the same on every screen size regardless of the device's actual ring radius (~matches a typical desktop window, so desktop feel is unchanged)
 function resize(){
   DPR=Math.min(window.devicePixelRatio||1,2);
   W=window.innerWidth; H=window.innerHeight;
   cv.width=W*DPR; cv.height=H*DPR; cv.style.width=W+"px"; cv.style.height=H+"px";
   ctx.setTransform(DPR,0,0,DPR,0,0);
   CX=W/2; CY=H/2;
-  baseR=Math.min(W,H)*0.30; R=baseR*(ringScale||1);
+  const minDim=Math.min(W,H);
+  baseR=minDim*(minDim<520?0.34:0.30);   // small screens (phones) get a bit more of the viewport so the ring isn't cramped
+  R=baseR*(ringScale||1);
 }
 window.addEventListener("resize",resize); resize();
 
@@ -635,7 +638,7 @@ function update(dt){
   if(fireT>0){ const bp=ballPos(); for(let i=0;i<2;i++)spawnParticle(bp.x,bp.y,Math.random()<0.5?"#ff7a1a":"#ffd24a",1.6); } // flame trail
   // move — base speed, flip-dart, and slow-mo power-up
   flipKick=Math.max(0,flipKick-dt*8);
-  const angSpeed=(speed/R)*(1+Math.min(score,250)*0.012)*(1+flipKick*0.85)*(slowT>0?0.5:1); // speed plateaus at ~4x by score 250 so high scores are reachable
+  const angSpeed=(speed/(REF_R*ringScale))*(1+Math.min(score,250)*0.012)*(1+flipKick*0.85)*(slowT>0?0.5:1); // speed plateaus at ~4x by score 250 so high scores are reachable; uses REF_R (not the device's actual R) so reaction time is consistent across screen sizes — ringScale still applies so EXPAND keeps working
   ball.a+=dir*angSpeed*dt*60;
   ball.a=(ball.a+Math.PI*2)%(Math.PI*2);
 
