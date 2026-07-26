@@ -393,15 +393,13 @@ const POWERS=[
   {key:"x2",     col:"#34d399", glyph:"2",  label:"DOUBLE"},
   {key:"fire",   col:"#ff7a1a", glyph:"▲",  label:"FIRE"},   // star power
   {key:"clear",  col:"#dfe7ff", glyph:"✕",  label:"CLEAR"},
-  {key:"expand", col:"#a3e635", glyph:"⊕",  label:"EXPAND"}  // grows the ring (100+ only)
+  {key:"expand", col:"#a3e635", glyph:"⊕",  label:"EXPAND"}  // grows the ring
 ];
 function powerByKey(k){ for(const p of POWERS) if(p.key===k) return p; }
 function spawnPowerup(){
-  // DOUBLE is common early; SLOW-MO unlocks at 75; EXPAND unlocks at 100
-  let bag;
-  if(score>=100)     bag=["slow","slow","shield","x2","fire","fire","clear","expand","expand"];
-  else if(score>=75) bag=["slow","slow","shield","shield","x2","x2","fire","clear"];
-  else               bag=["x2","x2","x2","x2","shield","shield","fire","clear"]; // 30-74: DOUBLE-heavy, no slow yet
+  // everything except SLOW-MO is in the mix from the start; SLOW-MO unlocks at 75+ so early runs aren't slowed down
+  let bag=["x2","x2","x2","shield","shield","fire","fire","clear","expand"];
+  if(score>=75) bag=bag.concat(["slow","slow"]);
   const type=powerByKey(bag[(Math.random()*bag.length)|0]);
   powerups.push({a:randAngle(ball.a,0.8), type, pop:0, life:7.5});
 }
@@ -677,7 +675,7 @@ function update(dt){
   }
   // power-ups: spawn on a timer, age out, and get tagged when the ball passes over
   puTimer-=dt;
-  if(puTimer<=0 && powerups.length===0 && score>=30){ spawnPowerup(); puTimer=(score>=50?6:10)+Math.random()*(score>=50?5:8); }
+  if(puTimer<=0 && powerups.length===0 && score>=10){ spawnPowerup(); puTimer=(score>=50?6:10)+Math.random()*(score>=50?5:8); }
   for(let i=powerups.length-1;i>=0;i--){
     const p=powerups[i]; p.pop=Math.min(1,p.pop+dt*5); p.life-=dt;
     if(angDist(ball.a,p.a)<0.18){ collectPowerup(p.type.key); powerups.splice(i,1); continue; }
